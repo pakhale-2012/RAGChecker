@@ -228,6 +228,60 @@ def evaluate_faithfulness(result: RAGResult):
         result.metrics[metrics.faithfulness] = faithful
     else:
         result.metrics[metrics.faithfulness] = 0.
+        
+def evaluate_correctness(result: RAGResult):
+    assert result.answer2response is not None
+    answer2response = result.answer2response
+    response_claims = result.response_claims
+    response = result.response
+    detailed_result = []
+    if len(answer2response) > 0:
+        num_entailments = sum(1 for x in answer2response if x == "Entailment")
+        num_contradictions = sum(1 for x in answer2response if x== 'Contradiction')
+        num_neutral = sum(1 for x in answer2response if x== 'Neutral')
+        
+        total = num_entailments + num_contradictions + num_neutral
+        score = (num_contradictions) / (total + 1e-8)
+        
+        for claim, label in zip(response_claims, answer2response):
+            if label == "Contradiction":
+                span = find_triplet_span(response, claim)
+                detailed_result.append({"claim": claim, "label": label, "span_text": span})
+        correctness = {
+            "score": score,
+            "detailed": detailed_result
+        }
+        result.metrics[metrics.correctness] = correctness
+    else:
+        result.metrics[metrics.correctness] = 0.
+
+
+def evaluate_completeness(result: RAGResult):
+    assert result.answer2response is not None
+    answer2response = result.answer2response
+    response_claims = result.response_claims
+    response = result.response
+    detailed_result = []
+    
+    if len(answer2response) > 0:
+        num_entailments = sum(1 for x in answer2response if x == "Entailment")
+        num_contradictions = sum(1 for x in answer2response if x== 'Contradiction')
+        num_neutral = sum(1 for x in answer2response if x== 'Neutral')
+        
+        total = num_entailments + num_contradictions + num_neutral
+        score = (num_contradictions + num_neutral) / (total + 1e-8)
+
+        for claim, label in zip(response_claims, answer2response):
+            if label != "Entailment":
+                span = find_triplet_span(response, claim)
+                detailed_result.append({"claim": claim, "label": label, "span_text": span})
+        completeness = {
+            "score": score,
+            "detailed": detailed_result
+        }
+        result.metrics[metrics.completeness] = completeness
+    else:
+        result.metrics[metrics.completeness] = 0.
 
 
 METRIC_FUNC_MAP = {
@@ -242,4 +296,6 @@ METRIC_FUNC_MAP = {
     metrics.hallucination: evaluate_hallucination,
     metrics.self_knowledge: evaluate_self_knowledge,
     metrics.faithfulness: evaluate_faithfulness,
+    metrics.correctness: evaluate_correctness,
+    metrics.completeness: evaluate_completeness
 }

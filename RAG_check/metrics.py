@@ -14,6 +14,8 @@ noise_sensitivity_in_irrelevant = "noise_sensitivity_in_irrelevant"
 hallucination = "hallucination"
 self_knowledge = "self_knowledge"
 faithfulness = "faithfulness"
+correctness = "correctness"
+completeness = "completeness"
 
 all_metrics = "all_metrics"
 
@@ -23,12 +25,12 @@ METRIC_GROUP_MAP = {
     retriever_metrics: [claim_recall, context_precision],
     generator_metrics: [
         context_utilization, noise_sensitivity_in_relevant, noise_sensitivity_in_irrelevant,
-        hallucination, self_knowledge, faithfulness
+        hallucination, self_knowledge, faithfulness, correctness, completeness
     ],
     all_metrics: [
         precision, recall, f1, claim_recall, context_precision,
         context_utilization, noise_sensitivity_in_relevant, noise_sensitivity_in_irrelevant,
-        hallucination, self_knowledge, faithfulness
+        hallucination, self_knowledge, faithfulness, correctness, completeness
     ]
 }
 
@@ -48,4 +50,6 @@ METRIC_REQUIREMENTS = {
     hallucination: ["retrieved2response", "answer2response"],
     self_knowledge: ["retrieved2response", "answer2response"],
     faithfulness: ["retrieved2response"],
+    correctness:["answer2response"],
+    completeness:["answer2response"]
 }
