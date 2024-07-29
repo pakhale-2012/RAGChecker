@@ -52,6 +52,7 @@ class RAGChecker():
         joint_check=True,
         joint_check_num=5
     ):
+        print('Custom code')
         if openai_api_key:
             os.environ['OPENAI_API_KEY'] = openai_api_key
         self.extractor_max_new_tokens = extractor_max_new_tokens
@@ -170,8 +171,16 @@ class RAGChecker():
                 result.response2answer = checking_results[i]
             elif check_type == "retrieved2answer":
                 result.retrieved2answer = checking_results[i]
+                print('*'*115)
+                if type(result.retrieved2answer[0]) is str:
+                    result.retrieved2answer = [[_] for _ in result.retrieved2answer]
+                    print('shape retrieved2answer',len(result.retrieved2answer),len(result.retrieved2answer[0]))
             else:
                 result.retrieved2response = checking_results[i]
+                print('*'*115)
+                if type(result.retrieved2response[0]) is str:
+                    result.retrieved2response = [result.retrieved2response]
+                    print('shape retrieved2response',len(result.retrieved2response),len(result.retrieved2response[0]))
         
     def evaluate(self, results: RAGResults, metrics=all_metrics, save_path=None):
         """
