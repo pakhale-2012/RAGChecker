@@ -47,7 +47,7 @@ METRIC_REQUIREMENTS = {
     context_utilization: ["retrieved2answer", "response2answer"],
     noise_sensitivity_in_relevant: ["retrieved2response", "answer2response", "retrieved2answer"],
     noise_sensitivity_in_irrelevant: ["retrieved2response", "answer2response", "retrieved2answer"],
-    hallucination: ["retrieved2response", "answer2response"],
+    hallucination: ["retrieved2response"],
     self_knowledge: ["retrieved2response", "answer2response"],
     faithfulness: ["retrieved2response"],
     correctness:["answer2response"],
