@@ -155,18 +155,9 @@ def evaluate_noise_sensitivity(result: RAGResult):
 
 
 def evaluate_hallucination(result: RAGResult):
-    if "hallucination" in result.metrics:
-        return
-    evaluate_unfaithfulness(result)
-
-
-def evaluate_self_knowledge(result: RAGResult):
-    if "self_knowledge" in result.metrics:
-        return
-    evaluate_unfaithfulness(result)
-
-
-def evaluate_unfaithfulness(result: RAGResult):
+    # if "hallucination" in result.metrics:
+    #     return
+    # evaluate_unfaithfulness(result)
     """Evaluate hallucination and self-knowledge together as they share the same intermediate results."""
     assert result.retrieved2response is not None and result.answer2response is not None
     retrieved2response = list(map(list, zip(*result.retrieved2response)))
@@ -178,7 +169,7 @@ def evaluate_unfaithfulness(result: RAGResult):
     retrieved2response_entailment = ['Entailment' if 'Entailment' in sublist else 
                    'Contradiction' if all(val == 'Contradiction' for val in sublist) else 
                    'Neutral' for sublist in retrieved2response]
-    print(retrieved2response_entailment)
+    
     if  len(answer2response) > 0 and len(retrieved2response[0]) > 0:
         num_neutral = sum(1 for i in range(len(retrieved2response_entailment)) if retrieved2response_entailment[i] == "Neutral")
         num_contradictions = sum(1 for i in range(len(retrieved2response_entailment)) if retrieved2response_entailment[i] == "Contradiction")
@@ -187,10 +178,8 @@ def evaluate_unfaithfulness(result: RAGResult):
         score = (num_contradictions + num_neutral) / (total + 1e-8)
         
         unfaithful = ~np.max(to_bool(retrieved2response), axis=1)
-        hallucination = [item for item, flag in zip(response_claims, unfaithful & ~to_bool(answer2response)) if flag]
+        hallucination = [item for item, flag in zip(response_claims, unfaithful) if flag]
 
-        self_knowledge = [item for item, flag in zip(response_claims, unfaithful & to_bool(answer2response)) if flag] 
-        
         for i, claim in enumerate(response_claims):
             label_context = retrieved2response_entailment[i]
             label_answer = answer2response[i]
@@ -199,14 +188,84 @@ def evaluate_unfaithfulness(result: RAGResult):
         hallucination_result = {
             'score': score,
             'hallucinated_claims': hallucination,
-            'llm_knowledge': self_knowledge,
             'detailed': detailed_result
         }
         result.metrics[metrics.hallucination] = hallucination_result
-        result.metrics[metrics.self_knowledge] = self_knowledge
     else:
         result.metrics[metrics.hallucination] = 0.
+
+
+def evaluate_self_knowledge(result: RAGResult):
+    """Evaluate hallucination and self-knowledge together as they share the same intermediate results."""
+    assert result.retrieved2response is not None and result.answer2response is not None
+    retrieved2response = list(map(list, zip(*result.retrieved2response)))
+    answer2response = result.answer2response
+    response_claims = result.response_claims
+    response = result.response
+    detailed_result = []
+    retrieved2response_entailment = ['Entailment' if 'Entailment' in sublist else 
+                   'Contradiction' if all(val == 'Contradiction' for val in sublist) else 
+                   'Neutral' for sublist in retrieved2response]
+    
+    if  len(answer2response) > 0 and len(retrieved2response[0]) > 0:
+        num_self_knowledge = sum(1 for i in range(len(retrieved2response_entailment)) if retrieved2response_entailment[i] != "Entailment" and answer2response[i]=="Entailment")
+        total = len(retrieved2response_entailment)
+        score = (num_self_knowledge) / (total + 1e-8)
+        
+        unfaithful = ~np.max(to_bool(retrieved2response), axis=1)
+        self_knowledge = [item for item, flag in zip(response_claims, unfaithful & to_bool(answer2response)) if flag] 
+        
+        for i, claim in enumerate(response_claims):
+            label_context = retrieved2response_entailment[i]
+            label_answer = answer2response[i]
+            span = find_triplet_span(response, claim)
+            detailed_result.append({"claim": claim, "label with respect to": {"context": label_context, "gt_answer": label_answer}, "span_text": span})
+        self_knowledge_result = {
+            'score': score,
+            'llm_knowledge': self_knowledge,
+            'detailed': detailed_result
+        }
+        result.metrics[metrics.self_knowledge] = self_knowledge_result
+    else:
         result.metrics[metrics.self_knowledge] = 0.
+
+
+# def evaluate_unfaithfulness(result: RAGResult):
+#     """Evaluate hallucination and self-knowledge together as they share the same intermediate results."""
+#     assert result.retrieved2response is not None and result.answer2response is not None
+#     retrieved2response = list(map(list, zip(*result.retrieved2response)))
+#     answer2response = result.answer2response
+#     response_claims = result.response_claims
+#     response = result.response
+#     hallucination_result = {}
+#     detailed_result = []
+#     retrieved2response_entailment = ['Entailment' if 'Entailment' in sublist else 
+#                    'Contradiction' if all(val == 'Contradiction' for val in sublist) else 
+#                    'Neutral' for sublist in retrieved2response]
+    
+#     if  len(answer2response) > 0 and len(retrieved2response[0]) > 0:
+#         num_neutral = sum(1 for i in range(len(retrieved2response_entailment)) if retrieved2response_entailment[i] == "Neutral")
+#         num_contradictions = sum(1 for i in range(len(retrieved2response_entailment)) if retrieved2response_entailment[i] == "Contradiction")
+        
+#         total = len(retrieved2response_entailment)
+#         score = (num_contradictions + num_neutral) / (total + 1e-8)
+        
+#         unfaithful = ~np.max(to_bool(retrieved2response), axis=1)
+#         hallucination = [item for item, flag in zip(response_claims, unfaithful & ~to_bool(answer2response)) if flag]
+
+#         for i, claim in enumerate(response_claims):
+#             label_context = retrieved2response_entailment[i]
+#             label_answer = answer2response[i]
+#             span = find_triplet_span(response, claim)
+#             detailed_result.append({"claim": claim, "label with respect to": {"context": label_context, "gt_answer": label_answer}, "span_text": span})
+#         hallucination_result = {
+#             'score': score,
+#             'hallucinated_claims': hallucination,
+#             'detailed': detailed_result
+#         }
+#         result.metrics[metrics.hallucination] = hallucination_result
+#     else:
+#         result.metrics[metrics.hallucination] = 0.
 
 
 def evaluate_faithfulness(result: RAGResult):
